@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Request System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="tenantForm">
+        <h2>Submit Maintenance Request</h2>
+        <form id="maintenanceForm">
+            <label for="tenantId">Tenant ID:</label>
+            <input type="number" id="tenantId" required>
+    
+            <label for="apartmentNumber">Apartment Number:</label>
+            <input type="number" id="apartmentNumber" required>
+    
+            <label for="area">Area:</label>
+            <select id="area" required>
+                <option value="bathroom">Bathroom</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="bedroom">Bedroom</option>
+                <option value="diningroom">Diningroom</option>
+            </select>
+    
+            <label for="description">Description:</label>
+            <textarea id="description" required></textarea>
+    
+            <label for="photo">Optional Photo:</label>
+            <input type="file" id="photo">
+    
+            <button type="button" onclick="submitRequest()">Submit Request</button>
+        </form>
+    </div>
+
+    <div id="maintenanceRequests">
+        <h2>Maintenance Requests</h2>
+        <!-- Add the following HTML inside the maintenanceRequests div -->
+<div id="filters">
+    <label for="apartmentNumberFilter">Apartment Number:</label>
+<input type="number" id="apartmentNumberFilter">
+
+<label for="startDateFilter">Start Date:</label>
+<input type="date" id="startDateFilter">
+
+<label for="endDateFilter">End Date:</label>
+<input type="date" id="endDateFilter">
+
+<label for="areaFilter">Area:</label>
+<select id="areaFilter">
+    <option value="">-- All --</option>
+    <option value="bathroom">Bathroom</option>
+    <option value="kitchen">Kitchen</option>
+    <option value="bedroom">Bedroom</option>
+    <option value="diningroom">Diningroom</option>
+</select>
+
+<label for="statusFilter">Status:</label>
+<select id="statusFilter">
+    <option value="">-- All --</option>
+    <option value="pending">Pending</option>
+    <option value="completed">Completed</option>
+</select>
+
+<button type="button" onclick="applyFilters()">Apply Filters</button>
+
+
+</div>
+
+        <ul id="requestsList"></ul>
+    </div>
+    
+    <div id="managerView">
+        <h2>Manager View</h2>
+
+        <!-- Add New Tenant Form -->
+        <form id="addTenantForm">
+            <label for="tenantId">Tenant Id:</label>
+            <input type="number" id="tenantIdForm" required>
+
+            <label for="tenantName">Tenant Name:</label>
+            <input type="text" id="tenantName" required>
+
+            <label for="tenantPhone">Tenant Phone:</label>
+            <input type="tel" id="tenantPhone" required>
+
+            <label for="tenantEmail">Tenant Email:</label>
+            <input type="email" id="tenantEmail" required>
+
+            <label for="tenantCheckIn">Date of Check-In:</label>
+            <input type="date" id="tenantCheckIn" required>
+
+            <label for="tenantApartment">Apartment Number:</label>
+            <input type="number" id="tenantApartment" required>
+
+            <button type="button" onclick="addNewTenant()">Add New Tenant</button>
+        </form>
+
+        <!-- Move Tenant Form -->
+        <form id="moveTenantForm">
+            <label for="moveTenantID">Tenant ID to Move:</label>
+            <input type="text" id="moveTenantID" required>
+
+            <label for="newApartmentNumber">New Apartment Number:</label>
+            <input type="number" id="newApartmentNumber" required>
+
+            <button type="button" onclick="moveTenant()">Move Tenant</button>
+        </form>
+
+        <!-- Delete Tenant Form -->
+        <form id="deleteTenantForm">
+            <label for="deleteTenantID">Tenant ID to Delete:</label>
+            <input type="number" id="deleteTenantID" required>
+
+            <button type="button" onclick="deleteTenant()">Delete Tenant</button>
+        </form>
+    </div>
+
+    <!-- Import Firebase modules -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-storage.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuidv4.min.js"></script>
+
+    <script>
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAHpxoIhLmYlq-a4GcIzo1FtTNuMrglPXY",
+            authDomain: "w-frontend.firebaseapp.com",
+            databaseURL: "https://w-frontend-default-rtdb.firebaseio.com",
+            projectId: "w-frontend",
+            storageBucket: "w-frontend.appspot.com",
+            messagingSenderId: "754277283401",
+            appId: "1:754277283401:web:c22f6e8c4a0d017f21f198",
+            measurementId: "G-MB0GXM3LYY"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Reference to the database
+        const database = firebase.database();
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadRequestsFromFirebase();
+        });
+// Declare global filter variables
+let apartmentNumberFilter = '';
+let startDateFilter = '';
+let endDateFilter = '';
+let areaFilter = '';
+let statusFilter = '';
+
+const requestIdsToDisplay = [
+'021725d6-7db4-49e7-9c1d-51ccaedcb80f',
+'2c63820d-c8eb-482a-b9ea-acae50947647',
+// Add more requestIds as needed
+];
+
+loadRequestsFromFirebase(requestIdsToDisplay);
+
+function applyFilters() {
+    // Update global filter variables
+    apartmentNumberFilter = document.getElementById('apartmentNumberFilter').value;
+    areaFilter = document.getElementById('areaFilter').value;
+    startDateFilter = document.getElementById('startDateFilter').value;
+    endDateFilter = document.getElementById('endDateFilter').value;
+    statusFilter = document.getElementById('statusFilter').value;
+
+    // Call the function to load requests with filters
+    console.log('Applying filters...');
+    loadRequestsFromFirebaseWithFilters();
+}
+
+function loadRequestsFromFirebaseWithFilters() {
+    // Reference to the 'requests' node in Firebase
+    const requestsRef = database.ref('requests');
+
+    // Start building the query
+    let query = requestsRef.orderByChild('date_time');
+
+    // Apply filters if provided
+    if (apartmentNumberFilter) {
+        query = query.equalTo(parseInt(apartmentNumberFilter, 10), 'apartmentNumber');
+    }
+    if (areaFilter) {
+        query = query.equalTo(areaFilter, 'area');
+    }
+    // Add other filters...
+
+    // Listen for changes in the query
+    query.on('value', function (snapshot) {
+        console.log('Query result received:', snapshot.val()); // Log the snapshot data
+
+        // Get the data from the snapshot
+        const requestsData = snapshot.val();
+
+        // Update the UI with the filtered requests
+        if (requestsData) {
+            console.log('Filtered Requests:', requestsData); // Log the filtered data
+
+            document.getElementById('requestsList').innerHTML = ''; // Clear existing list
+
+            Object.entries(requestsData).forEach(([key, request]) => updateUI(key, request));
+        }
+    });
+
+    console.log('Query:', query.toString()); // Log the query
+}
+
+
+        
+        
+        function submitRequest() {
+            const tenantId = document.getElementById('tenantId').value;
+            const apartmentNumber = document.getElementById('apartmentNumber').value;
+            const area = document.getElementById('area').value;
+            const description = document.getElementById('description').value;
+            const photo = document.getElementById('photo').files[0];
+        
+            // Validate that the tenant ID exists in the database
+            database.ref('tenants').child(tenantId).once('value', function (snapshot) {
+                const tenantData = snapshot.val();
+        
+                console.log("Tenant Data:", tenantData); // Log the retrieved tenant data
+        
+                if (!tenantData || tenantData.apartmentNumber != apartmentNumber) {
+                    alert("Invalid tenant ID or apartment number. Please check your information.");
+                    return;
+                }
+        
+                // Generate a unique request ID using uuid
+                const requestId = uuidv4();
+        
+                // Set date and time to the current date and time
+                const dateTime = new Date();
+        
+                // Store the request in Firebase
+                storeRequestInFirebase(requestId, tenantId, apartmentNumber, area, description, photo, 'pending', dateTime);
+        
+                // Clear the form fields
+                clearFormFields();
+            });
+        }
+        
+        
+        
+        
+        function storeRequestInFirebase(requestId, tenantId, apartmentNumber, area, description, photo, status, dateTime) {
+            const newRequest = {
+                tenantId: tenantId,
+                apartmentNumber: apartmentNumber,
+                area: area,
+                description: description,
+                photo: null, // Placeholder for the photo URL
+                status: status,
+                date_time: dateTime.toISOString()
+            };
+        
+            console.log("Adding request to Firebase:", newRequest);
+        
+            // Push the new request to the 'requests' node in Firebase
+            const newRequestRef = database.ref('requests').child(requestId);
+            newRequestRef.set(newRequest);
+        
+            // Handle the optional photo
+            if (isImageFile(photo)) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const photoUrl = event.target.result;
+                    newRequestRef.child('photo').set(photoUrl); // Update the photo URL in Firebase
+                };
+                reader.readAsDataURL(photo);
+            } else {
+                alert("Invalid file type. Please select an image file.");
+            }
+        }
+        
+        function isImageFile(file) {
+            return file.type.startsWith('image/');
+        }
+        
+        
+        
+
+        function loadRequestsFromFirebase() {
+            // Reference to the 'requests' node in Firebase
+            const requestsRef = database.ref('requests');
+        
+            // Clear the existing requests before updating the UI
+            document.getElementById('requestsList').innerHTML = '';
+        
+            // Listen for changes in the 'requests' node in Firebase
+            requestsRef.on('value', function (snapshot) {
+                // Get the data from the snapshot
+                const requestsData = snapshot.val();
+        
+                // Update the UI with the requests
+                if (requestsData) {
+                    Object.entries(requestsData).forEach(([key, request]) => updateUI(key, request));
+                }
+            });
+        }  
+       
+        
+        
+
+        function clearFormFields() {
+            // Clear form fields after submitting a request
+            document.getElementById('apartmentNumber').value = '';
+            document.getElementById('area').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('photo').value = '';
+        }
+        function updateUI(requestId, request) {
+            const requestsList = document.getElementById('requestsList');
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div>
+                    <strong>Request ID: ${requestId}</strong>
+                    <p>Apartment ${request.apartmentNumber}</p>
+                    <p>Area: ${request.area}</p>
+                    <p>Description: ${request.description}</p>
+                    <p>Status: 
+                        <select id="status_${requestId}">
+                            <option value="pending" ${request.status === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="completed" ${request.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </p>
+                    <p>Date and Time: ${new Date(request.date_time).toLocaleString()}</p>
+                    <button onclick="updateStatus('${requestId}')">Update Status</button>
+                </div>
+                ${request.photo ? `<img src="${request.photo}" alt="Request Photo" style="max-width: 100px;">` : ''}
+            `;
+        
+            if (request.status === 'completed') {
+                li.classList.add('completed');
+            }
+        
+            requestsList.appendChild(li);
+        }
+
+// Function to update the status
+function updateStatus(requestId) {
+    const statusElement = document.getElementById(`status_${requestId}`);
+    const newStatus = statusElement.value; // Get the new status from the dropdown menu
+
+    // Assuming you have a function to update the status in your Firebase database
+    // Replace the following line with the actual function or code to update the status
+    updateStatusInFirebase(requestId, newStatus);
+}
+
+// Example function to update status in Firebase
+function updateStatusInFirebase(requestId, newStatus) {
+    const requestRef = firebase.database().ref(`requests/${requestId}`);
+    
+    requestRef.update({
+        status: newStatus
+    })
+    .then(() => {
+        console.log('Status updated successfully.');
+    })
+    .catch(error => {
+        console.error('Error updating status:', error);
+    });
+}
+
+        
+
+        function addNewTenant() {
+            const tenantIDInput = document.getElementById('tenantIdForm');
+            const tenantName = document.getElementById('tenantName').value;
+            const tenantPhone = document.getElementById('tenantPhone').value;
+            const tenantEmail = document.getElementById('tenantEmail').value;
+            const tenantCheckIn = document.getElementById('tenantCheckIn').value;
+            const tenantApartmentInput = document.getElementById('tenantApartment');
+        
+            // Convert values to integers
+            const tenantID = parseInt(tenantIDInput.value.trim(), 10);
+            const tenantApartment = parseInt(tenantApartmentInput.value, 10);
+        
+            // Validate tenant ID format
+            if (isNaN(tenantID) || !Number.isInteger(tenantID)) {
+                alert("Invalid tenant ID format. Please enter a valid integer ID.");
+                return;
+            }
+        
+            // Validate apartment number format
+            if (isNaN(tenantApartment) || !Number.isInteger(tenantApartment)) {
+                alert("Invalid apartment number format. Please enter a valid integer apartment number.");
+                return;
+            }
+        
+            // Validate phone number format (assuming a simple validation for illustration)
+            if (!/^\d{10}$/.test(tenantPhone)) {
+                alert("Invalid phone number format. Please enter a 10-digit phone number.");
+                return;
+            }
+        
+            // Validate email format (assuming a simple validation for illustration)
+            if (!/^\S+@\S+\.\S+$/.test(tenantEmail)) {
+                alert("Invalid email format. Please enter a valid email address.");
+                return;
+            }
+        
+            // Check if the tenant already exists in the database
+            database.ref('tenants').child(tenantID).once('value', function (snapshot) {
+                const existingTenantData = snapshot.val();
+        
+                if (existingTenantData) {
+                    alert("Tenant with the specified ID already exists. Please choose a different ID.");
+                } else {
+                    // If the tenant doesn't exist, proceed to add them to the database
+                    const newTenant = {
+                        id: tenantID,
+                        name: tenantName,
+                        phone: tenantPhone,
+                        email: tenantEmail,
+                        checkIn: tenantCheckIn,
+                        apartmentNumber: tenantApartment
+                    };
+        
+                    // Store the new tenant in Firebase
+                    database.ref('tenants').child(tenantID).set(newTenant);
+        
+                    // Clear the form fields
+                    clearAddTenantForm();
+                }
+            });
+        }
+        
+        
+        
+
+
+        function moveTenant() {
+            const moveTenantID = document.getElementById('moveTenantID').value;
+            const newApartmentNumber = document.getElementById('newApartmentNumber').value;
+        
+            // Check if the tenant ID to move exists in the database
+            validateTenantID(moveTenantID, function (exists) {
+                if (exists) {
+                    // Update the apartment number of the specified tenant in Firebase
+                    database.ref('tenants').child(moveTenantID).update({
+                        apartmentNumber: newApartmentNumber
+                    });
+        
+                    // Clear the form fields
+                    clearMoveTenantForm();
+                } else {
+                    alert("Tenant with the specified ID does not exist in the database.");
+                }
+            });
+        }
+        
+        function deleteTenant() {
+            const deleteTenantID = document.getElementById('deleteTenantID').value;
+        
+            // Check if the tenant ID to delete exists in the database
+            validateTenantID(deleteTenantID, function (exists) {
+                if (exists) {
+                    // Delete the specified tenant from Firebase
+                    database.ref('tenants').child(deleteTenantID).remove();
+        
+                    // Clear the form fields
+                    clearDeleteTenantForm();
+                } else {
+                    alert("Tenant with the specified ID does not exist in the database.");
+                }
+            });
+        }
+        
+        function validateTenantID(tenantID, callback) {
+            // Check if the tenant ID exists in the database
+            database.ref('tenants').child(tenantID).once('value', function (snapshot) {
+                const tenantData = snapshot.val();
+                const exists = !!tenantData; // Convert to boolean
+        
+                // Execute the callback with the result
+                callback(exists);
+            });
+        }
+        
+
+        // Clear form fields for adding a new tenant
+        function clearAddTenantForm() {
+            document.getElementById('tenantId').value = '';
+            document.getElementById('tenantName').value = '';
+            document.getElementById('tenantPhone').value = '';
+            document.getElementById('tenantEmail').value = '';
+            document.getElementById('tenantCheckIn').value = '';
+            document.getElementById('tenantApartment').value = '';
+        }
+
+        // Clear form fields for moving a tenant
+        function clearMoveTenantForm() {
+            document.getElementById('moveTenantID').value = '';
+            document.getElementById('newApartmentNumber').value = '';
+        }
+
+        // Clear form fields for deleting a tenant
+        function clearDeleteTenantForm() {
+            document.getElementById('deleteTenantID').value = '';
+        }
+        // Add these functions to your script tag
+
+
+
+    </script>
+</body>
+</html>
