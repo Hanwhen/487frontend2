@@ -46,3 +46,8 @@ li {
 #managerView form {
     margin-bottom: 20px;
 }
+
+label {
+    display: block;
+    margin-bottom: 5px; /* Optional: Add some spacing between label and input */
+}

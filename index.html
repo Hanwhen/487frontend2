@@ -283,7 +283,6 @@ function loadRequestsFromFirebaseWithFilters() {
         
         
         
-
         function loadRequestsFromFirebase() {
             // Reference to the 'requests' node in Firebase
             const requestsRef = database.ref('requests');
@@ -301,8 +300,7 @@ function loadRequestsFromFirebaseWithFilters() {
                     Object.entries(requestsData).forEach(([key, request]) => updateUI(key, request));
                 }
             });
-        }  
-       
+        }
         
         
 
@@ -314,9 +312,28 @@ function loadRequestsFromFirebaseWithFilters() {
             document.getElementById('photo').value = '';
         }
         function updateUI(requestId, request) {
-            const requestsList = document.getElementById('requestsList');
-            const li = document.createElement('li');
-            li.innerHTML = `
+            const existingRequest = document.getElementById(requestId);
+        
+            if (existingRequest) {
+                // If the request already exists in the UI, update its content
+                existingRequest.innerHTML = getRequestHTML(requestId, request);
+            } else {
+                // If the request doesn't exist, create a new list item and append it to the UI
+                const requestsList = document.getElementById('requestsList');
+                const li = document.createElement('li');
+                li.setAttribute('id', requestId);
+                li.innerHTML = getRequestHTML(requestId, request);
+        
+                if (request.status === 'completed') {
+                    li.classList.add('completed');
+                }
+        
+                requestsList.appendChild(li);
+            }
+        }
+        
+        function getRequestHTML(requestId, request) {
+            return `
                 <div>
                     <strong>Request ID: ${requestId}</strong>
                     <p>Apartment ${request.apartmentNumber}</p>
@@ -333,13 +350,8 @@ function loadRequestsFromFirebaseWithFilters() {
                 </div>
                 ${request.photo ? `<img src="${request.photo}" alt="Request Photo" style="max-width: 100px;">` : ''}
             `;
-        
-            if (request.status === 'completed') {
-                li.classList.add('completed');
-            }
-        
-            requestsList.appendChild(li);
         }
+        
 
 // Function to update the status
 function updateStatus(requestId) {
