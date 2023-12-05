@@ -187,7 +187,7 @@ function loadRequestsFromFirebaseWithFilters() {
     if (areaFilter) {
         query = query.equalTo(areaFilter, 'area');
     }
-    // Add other filters...
+
 
     // Listen for changes in the query
     query.on('value', function (snapshot) {
@@ -495,7 +495,7 @@ function updateStatusInFirebase(requestId, newStatus) {
         }
         
 
-        // Clear form fields for adding a new tenant
+  
         function clearAddTenantForm() {
             document.getElementById('tenantId').value = '';
             document.getElementById('tenantName').value = '';
@@ -505,17 +505,17 @@ function updateStatusInFirebase(requestId, newStatus) {
             document.getElementById('tenantApartment').value = '';
         }
 
-        // Clear form fields for moving a tenant
+
         function clearMoveTenantForm() {
             document.getElementById('moveTenantID').value = '';
             document.getElementById('newApartmentNumber').value = '';
         }
 
-        // Clear form fields for deleting a tenant
+
         function clearDeleteTenantForm() {
             document.getElementById('deleteTenantID').value = '';
         }
-        // Add these functions to your script tag
+
 
 
 
